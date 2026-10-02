@@ -42,7 +42,8 @@ kuber/
 ### Prerequisites
 
 - Node.js 18+
-- PostgreSQL 12+
+- A [Neon](https://neon.tech) account (free tier) for the Postgres database
+- `psql` client (for running schema/seed files) — `brew install libpq` on macOS
 - Expo CLI (mobile only): `npm install -g expo-cli`
 
 ### 1. Install dependencies
@@ -53,12 +54,16 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 2. Set up the database
+### 2. Set up the database (Neon)
+
+1. Sign up at [neon.tech](https://neon.tech) and create a new project.
+2. Create a database named `finance_tracker` (or use the default Neon creates).
+3. From the project dashboard, copy the connection string (**Connection Details** → pick "Pooled connection" for the app, it looks like `postgresql://user:password@ep-xxxx.aws.neon.tech/finance_tracker?sslmode=require`).
+4. Apply the schema and seed data using that connection string:
 
 ```bash
-createdb finance_tracker
-psql finance_tracker < database/schema.sql
-psql finance_tracker < database/seed.sql
+psql '<your-neon-connection-string>' -f database/schema.sql
+psql '<your-neon-connection-string>' -f database/seed.sql
 ```
 
 ### 3. Configure environment
@@ -71,11 +76,7 @@ cp .env.example .env
 Minimum required fields in `.env`:
 
 ```
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=finance_tracker
-DB_USER=<your postgres user>
-DB_PASSWORD=<your postgres password>
+DATABASE_URL=<your-neon-connection-string>
 JWT_SECRET=<any random string>
 ```
 

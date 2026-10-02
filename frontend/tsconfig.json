@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "jsx": "react-jsx",
@@ -18,15 +22,36 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@screens/*": ["./src/screens/*"],
-      "@pages/*": ["./src/pages/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@types/*": ["./src/types/*"],
-      "@utils/*": ["./src/utils/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@components/*": [
+        "./src/components/*"
+      ],
+      "@screens/*": [
+        "./src/screens/*"
+      ],
+      "@pages/*": [
+        "./src/pages/*"
+      ],
+      "@hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@types/*": [
+        "./src/types/*"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ],
+  "extends": "expo/tsconfig.base"
 }
