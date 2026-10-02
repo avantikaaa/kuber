@@ -1,0 +1,5 @@
+.expo/
+node_modules/
+.idea/
+.code/
+.DS_Store/
