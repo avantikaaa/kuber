@@ -8,14 +8,19 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      'react-native$': 'react-native-web',
       '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
       '@screens': path.resolve(__dirname, './src/screens'),
       '@pages': path.resolve(__dirname, './src/pages'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@types': path.resolve(__dirname, './src/types'),
+      '@app-types': path.resolve(__dirname, './src/types'),
       '@utils': path.resolve(__dirname, './src/utils'),
     },
+  },
+  define: {
+    // react-native-web and several RN libraries read this global at import time.
+    global: 'globalThis',
   },
   server: {
     port: 3001,
