@@ -1,0 +1,208 @@
+==============================================
+FINANCE TRACKER - PROJECT STRUCTURE
+==============================================
+
+PROJECT ROOT: /Users/avantika.mudumbai/Desktop/self/project/kuber/
+
+DIRECTORY LAYOUT:
+└── kuber/ (PROJECT ROOT)
+    ├── backend/                 ← Main application
+    │   ├── src/
+    │   │   ├── app.ts          (Express server)
+    │   │   ├── services/       (EmailParser, CategorySuggester, TransactionService)
+    │   │   └── utils/          (db, validators, email-patterns)
+    │   ├── tsconfig.json
+    │   ├── package.json
+    │   └── .env.example
+    │
+    ├── frontend/                ← Main application
+    │   ├── src/
+    │   │   ├── App.tsx         (React root)
+    │   │   ├── types/
+    │   │   ├── utils/          (api, store, theme)
+    │   │   ├── hooks/          (useTransactions, useCategories)
+    │   │   ├── screens/        (React Native - to be created)
+    │   │   ├── pages/          (React Web - to be created)
+    │   │   └── components/     (Shared - to be created)
+    │   ├── web/                (Vite entry)
+    │   ├── mobile/             (Expo entry)
+    │   ├── tsconfig.json
+    │   ├── package.json
+    │   └── vite.config.ts
+    │
+    ├── database/                ← Database files
+    │   ├── schema.sql          (8 tables, indexes)
+    │   └── seed.sql            (default data)
+    │
+    ├── docs/                    ← Design & planning docs
+    │   ├── wireframes.md       (UI specifications)
+    │   ├── colourscheme        (color palette)
+    │   └── FILES_CREATED.txt   (build summary)
+    │
+    ├── drawing_board/           ← Initial planning (ARCHIVED - not needed)
+    │   └── (all initial planning files)
+    │
+    ├── README.md                ← Main documentation
+    ├── BUILD_SUMMARY.md         ← What's been built
+    ├── IMPLEMENTATION.md        ← 127-item checklist for phases
+    ├── GETTING_STARTED.md       ← Setup & quick start guide
+    ├── PROJECT_STRUCTURE.txt    ← This file
+    └── package.json             ← Root npm workspace
+
+==============================================
+WHAT'S IN EACH DIRECTORY
+==============================================
+
+MAIN APPLICATION:
+└── backend/ + frontend/ = Active development here
+
+SUPPORTING:
+├── database/ = SQL migrations (not code)
+├── docs/ = Design reference & planning docs
+└── drawing_board/ = Can be archived/deleted later
+
+==============================================
+MAIN FILES TO FOCUS ON
+==============================================
+
+BACKEND:
+  app.ts                  ← Express server
+  services/
+    ├── EmailParser.ts    ← Email extraction logic
+    ├── CategorySuggester.ts  ← Smart suggestions
+    └── TransactionService.ts ← CRUD + analytics
+  utils/
+    ├── db.ts             ← Database connection
+    ├── validators.ts     ← Input validation
+    └── email-patterns.ts ← Regex patterns
+
+FRONTEND:
+  App.tsx                 ← Main React component
+  utils/
+    ├── store.ts          ← Zustand state management
+    ├── api.ts            ← API client with axios
+    └── theme.ts          ← Chakra UI theme config
+  hooks/
+    ├── useTransactions.ts    ← Data fetching
+    └── useCategories.ts      ← Category queries
+  types/index.ts          ← All TypeScript interfaces
+
+DATABASE:
+  schema.sql              ← 8 tables with relationships
+  seed.sql                ← Default categories
+
+==============================================
+FILES TO READ (IN ORDER)
+==============================================
+
+1. README.md
+   → Features, tech stack, overview
+
+2. BUILD_SUMMARY.md
+   → What's been built (services, stores, types, etc.)
+
+3. IMPLEMENTATION.md
+   → Detailed 127-item checklist for all 5 phases
+
+4. docs/wireframes.md
+   → UI specifications for all 7 screens
+
+5. GETTING_STARTED.md
+   → Setup instructions & development guide
+
+6. Code files
+   → backend/src/services/ (email parsing, categories)
+   → frontend/src/utils/ (state, API, theme)
+
+==============================================
+WORKING DIRECTORIES
+==============================================
+
+TO START DEVELOPMENT:
+
+1. Root Level:
+   npm install          (installs workspaces)
+
+2. Backend:
+   cd backend
+   npm install
+   cp .env.example .env (edit with your creds)
+   npm run dev
+
+3. Frontend:
+   cd frontend
+   npm install
+   npm run web:dev      (web)
+   OR
+   npm run mobile:start (mobile)
+
+==============================================
+WHAT NOT TO EDIT/DELETE
+==============================================
+
+⚠️ DO NOT DELETE:
+  - backend/src/services/ ← Core logic (ready to use)
+  - frontend/src/utils/ ← State management (ready to use)
+  - frontend/src/types/ ← Type definitions (all models)
+  - frontend/src/hooks/ ← Data fetching (configured)
+  - database/schema.sql ← Database design (complete)
+
+✅ CAN BE REMOVED LATER:
+  - drawing_board/ ← Initial planning (archived)
+
+==============================================
+TOTAL PROJECT SIZE
+==============================================
+
+Implemented Code:
+  ├── Backend: ~1000 lines (services, utils)
+  ├── Frontend: ~400 lines (utilities, hooks)
+  ├── Database: ~150 lines (schema)
+  └── Total: ~1550 lines
+
+Next Build (Phase 1):
+  └── +800-1000 lines (auth routes & UI)
+
+Estimated MVP:
+  └── 8000-10000 total lines (after all 5 phases)
+
+==============================================
+QUICK REFERENCE
+==============================================
+
+Backend URL:       http://localhost:3000
+Frontend URL:      http://localhost:3001
+Database:          finance_tracker (PostgreSQL)
+
+Services Built:
+  ✓ EmailParser         (OAuth2 + regex extraction)
+  ✓ CategorySuggester   (fuzzy matching + keywords)
+  ✓ TransactionService  (CRUD + analytics)
+
+Frontend Stack:
+  ✓ Zustand (state)
+  ✓ React Query (caching)
+  ✓ Chakra UI (components)
+  ✓ Axios (API)
+
+==============================================
+NEXT PHASE
+==============================================
+
+Phase 1: Authentication (4-5 days)
+
+See IMPLEMENTATION.md for:
+  - Detailed checklist
+  - Specific files to create
+  - Step-by-step instructions
+  - Testing requirements
+
+Quick Steps:
+  1. Create backend auth routes
+  2. Create frontend login/signup screens
+  3. Wire everything together
+  4. Test signup → login → home flow
+
+==============================================
+Need help? See GETTING_STARTED.md
+==============================================

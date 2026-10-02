@@ -1,0 +1,17 @@
+| UI Element | Light Mode | Dark Mode |
+| --- | --- | --- |
+| **Background** | `#FFFFFF` | `#1E1E2E` |
+| **Surface** | `#F5F5F5` | `#2E2E3E` |
+| **Primary** | `#1A1A3E` | `#4B4B9E` |
+| **Primary Variant** | `#2D2D6E` | `#2D2D6E` |
+| **Secondary** | `#4B4B9E` | `#7070BE` |
+| **Secondary Variant** | `#7070BE` | `#C3C3EA` |
+
+**Dark Mode Color Values (Standalone):**
+
+* **Dark Background:** `#1E1E2E`
+* **Dark Surface:** `#2E2E3E`
+* **Primary (Dark):** `#4B4B9E`
+* **Primary Variant (Dark):** `#2D2D6E`
+* **Secondary (Dark):** `#7070BE`
+* **Secondary Variant (Dark):** `#C3C3EA`
