@@ -1,23 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Select,
-  Stack,
-  Text,
-  HStack,
-  VStack,
-  useToast,
-} from '@chakra-ui/react';
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Button, TextInput, Menu, Snackbar } from 'react-native-paper';
 import { useCreateTransaction, useUpdateTransaction } from '@hooks/useTransactions';
-import { useCategories, useCreateCategory, useSubcategories } from '@hooks/useCategories';
+import {
+  useCategories,
+  useCreateCategory,
+  useCreateSubcategory,
+  useSubcategories,
+} from '@hooks/useCategories';
 import { getCategoryColor } from '@utils/theme';
-import type { Transaction } from '@types/index';
+import { useSnackbar } from '@utils/useSnackbar';
+import type { Transaction, Category, Subcategory } from '../types';
 
-const NEW_CATEGORY_VALUE = '__new__';
+const CURRENCIES = [
+  { value: 'USD', label: 'USD ($)' },
+  { value: 'EUR', label: 'EUR (€)' },
+  { value: 'INR', label: 'INR (₹)' },
+  { value: 'GBP', label: 'GBP (£)' },
+];
+
+const PAYMENT_MODES = [
+  { value: 'card', label: 'Card' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'upi', label: 'UPI' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'wallet', label: 'Wallet' },
+  { value: 'cheque', label: 'Cheque' },
+];
 
 interface TransactionFormProps {
   initialData?: Transaction;
@@ -25,12 +34,51 @@ interface TransactionFormProps {
   onCancel?: () => void;
 }
 
+// Simple labeled dropdown built from a Paper Menu, since Paper has no native <Select>.
+const DropdownField: React.FC<{
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onSelect: (value: string) => void;
+}> = ({ label, value, options, onSelect }) => {
+  const [visible, setVisible] = useState(false);
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <Menu
+      visible={visible}
+      onDismiss={() => setVisible(false)}
+      anchor={
+        <TextInput
+          label={label}
+          value={selected?.label || ''}
+          editable={false}
+          right={<TextInput.Icon icon="menu-down" onPress={() => setVisible(true)} />}
+          onPressIn={() => setVisible(true)}
+          style={styles.input}
+        />
+      }
+    >
+      {options.map((opt) => (
+        <Menu.Item
+          key={opt.value}
+          title={opt.label}
+          onPress={() => {
+            onSelect(opt.value);
+            setVisible(false);
+          }}
+        />
+      ))}
+    </Menu>
+  );
+};
+
 export const TransactionForm: React.FC<TransactionFormProps> = ({
   initialData,
   onSuccess,
   onCancel,
 }) => {
-  const toast = useToast();
+  const snackbar = useSnackbar();
   const { data: categories } = useCategories();
   const createCategoryMutation = useCreateCategory();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(
@@ -39,15 +87,18 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const { data: subcategories } = useSubcategories(selectedCategory!);
+  const createSubcategoryMutation = useCreateSubcategory();
+  const [isNewSubcategory, setIsNewSubcategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
 
   const [formData, setFormData] = useState({
     description: initialData?.description || '',
-    amount: initialData?.amount || '',
+    amount: initialData?.amount ? String(initialData.amount) : '',
     currency: initialData?.currency || 'USD',
     mode_of_payment: initialData?.mode_of_payment || 'card',
-    category_id: initialData?.category_id || '',
-    subcategory_id: initialData?.subcategory_id || '',
-    bank_account_id: initialData?.bank_account_id || '',
+    category_id: initialData?.category_id ? String(initialData.category_id) : '',
+    subcategory_id: initialData?.subcategory_id ? String(initialData.subcategory_id) : '',
+    bank_account_id: initialData?.bank_account_id ? String(initialData.bank_account_id) : '',
     transaction_date: initialData?.transaction_date || new Date().toISOString().split('T')[0],
   });
 
@@ -55,44 +106,42 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const updateMutation = useUpdateTransaction();
   const isLoading = createMutation.isLoading || updateMutation.isLoading;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const setField = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Reset subcategory when category changes
-    if (name === 'category_id') {
-      if (value === NEW_CATEGORY_VALUE) {
-        setIsNewCategory(true);
-        setSelectedCategory(null);
-        setFormData((prev) => ({ ...prev, subcategory_id: '' }));
-        return;
-      }
-      setIsNewCategory(false);
-      setSelectedCategory(parseInt(value));
-      setFormData((prev) => ({ ...prev, subcategory_id: '' }));
-    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCategorySelect = (value: string) => {
+    if (value === '__new__') {
+      setIsNewCategory(true);
+      setSelectedCategory(null);
+      setFormData((prev) => ({ ...prev, category_id: value, subcategory_id: '' }));
+      return;
+    }
+    setIsNewCategory(false);
+    setSelectedCategory(parseInt(value));
+    setFormData((prev) => ({ ...prev, category_id: value, subcategory_id: '' }));
+    setIsNewSubcategory(false);
+    setNewSubcategoryName('');
+  };
 
+  const handleSubcategorySelect = (value: string) => {
+    if (value === '__new__') {
+      setIsNewSubcategory(true);
+      setFormData((prev) => ({ ...prev, subcategory_id: '' }));
+      return;
+    }
+    setIsNewSubcategory(false);
+    setField('subcategory_id', value);
+  };
+
+  const handleSubmit = async () => {
     if (!formData.description || !formData.amount || (!formData.category_id && !isNewCategory)) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Please fill in all required fields', status: 'error' });
       return;
     }
 
     if (isNewCategory && !newCategoryName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a category name',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Please enter a category name', status: 'error' });
       return;
     }
 
@@ -105,40 +154,38 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         });
         categoryId = newCategory.id;
       } else {
-        categoryId = parseInt(formData.category_id as string);
+        categoryId = parseInt(formData.category_id);
       }
 
+      let subcategoryId: number | null = null;
+      if (isNewSubcategory) {
+        if (!newSubcategoryName.trim()) {
+          snackbar.show({ title: 'Error', description: 'Please enter a subcategory name', status: 'error' });
+          return;
+        }
+        const newSubcategory = await createSubcategoryMutation.mutateAsync({
+          categoryId,
+          data: { name: newSubcategoryName.trim() },
+        });
+        subcategoryId = newSubcategory.id;
+      } else if (formData.subcategory_id) {
+        subcategoryId = parseInt(formData.subcategory_id);
+      }
+
+      const payload = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+        bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id) : null,
+      };
+
       if (initialData) {
-        await updateMutation.mutateAsync({
-          id: initialData.id,
-          data: {
-            ...formData,
-            amount: parseFloat(formData.amount as string),
-            category_id: categoryId,
-            subcategory_id: formData.subcategory_id ? parseInt(formData.subcategory_id as string) : null,
-            bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id as string) : null,
-          },
-        });
-        toast({
-          title: 'Success',
-          description: 'Transaction updated',
-          status: 'success',
-          duration: 2000,
-        });
+        await updateMutation.mutateAsync({ id: initialData.id, data: payload });
+        snackbar.show({ title: 'Success', description: 'Transaction updated', status: 'success', duration: 2000 });
       } else {
-        await createMutation.mutateAsync({
-          ...formData,
-          amount: parseFloat(formData.amount as string),
-          category_id: categoryId,
-          subcategory_id: formData.subcategory_id ? parseInt(formData.subcategory_id as string) : null,
-          bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id as string) : null,
-        });
-        toast({
-          title: 'Success',
-          description: 'Transaction created',
-          status: 'success',
-          duration: 2000,
-        });
+        await createMutation.mutateAsync(payload);
+        snackbar.show({ title: 'Success', description: 'Transaction created', status: 'success', duration: 2000 });
         setFormData({
           description: '',
           amount: '',
@@ -151,149 +198,167 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         });
         setIsNewCategory(false);
         setNewCategoryName('');
+        setIsNewSubcategory(false);
+        setNewSubcategoryName('');
       }
       onSuccess && onSuccess({} as Transaction);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save transaction',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to save transaction', status: 'error' });
     }
   };
 
+  const categoryOptions = [
+    ...(categories?.map((cat: Category) => ({ value: String(cat.id), label: cat.name })) || []),
+    { value: '__new__', label: '+ Add new category' },
+  ];
+
+  const subcategoryOptions = [
+    { value: '', label: 'None' },
+    ...(subcategories?.map((sub: Subcategory) => ({ value: String(sub.id), label: sub.name })) || []),
+    { value: '__new__', label: '+ Add new subcategory' },
+  ];
+
   return (
-    <Box as="form" onSubmit={handleSubmit} p={6} bg="bg-secondary" borderRadius="lg">
-      <VStack spacing={4}>
-        <FormControl isRequired>
-          <FormLabel>Description</FormLabel>
-          <Input
-            name="description"
-            placeholder="What did you buy?"
-            value={formData.description}
-            onChange={handleChange}
+    <View style={styles.container}>
+      <TextInput
+        label="Description *"
+        placeholder="What did you buy?"
+        value={formData.description}
+        onChangeText={(v) => setField('description', v)}
+        style={styles.input}
+      />
+
+      <View style={styles.row}>
+        <TextInput
+          label="Amount *"
+          placeholder="0.00"
+          keyboardType="decimal-pad"
+          value={formData.amount}
+          onChangeText={(v) => setField('amount', v)}
+          style={[styles.input, styles.flex1]}
+        />
+        <DropdownField
+          label="Currency *"
+          value={formData.currency}
+          options={CURRENCIES}
+          onSelect={(v) => setField('currency', v)}
+        />
+      </View>
+
+      <DropdownField
+        label="Mode of Payment *"
+        value={formData.mode_of_payment}
+        options={PAYMENT_MODES}
+        onSelect={(v) => setField('mode_of_payment', v)}
+      />
+
+      {isNewCategory ? (
+        <View style={styles.row}>
+          <TextInput
+            label="New category name"
+            value={newCategoryName}
+            onChangeText={setNewCategoryName}
+            style={[styles.input, styles.flex1]}
+            autoFocus
           />
-        </FormControl>
+          <Button
+            mode="outlined"
+            onPress={() => {
+              setIsNewCategory(false);
+              setNewCategoryName('');
+            }}
+          >
+            Cancel
+          </Button>
+        </View>
+      ) : (
+        <DropdownField
+          label="Category *"
+          value={formData.category_id}
+          options={categoryOptions}
+          onSelect={handleCategorySelect}
+        />
+      )}
 
-        <HStack spacing={4} w="full">
-          <FormControl isRequired flex={1}>
-            <FormLabel>Amount</FormLabel>
-            <Input
-              name="amount"
-              type="number"
-              placeholder="0.00"
-              step="0.01"
-              value={formData.amount}
-              onChange={handleChange}
-            />
-          </FormControl>
-
-          <FormControl isRequired flex={1}>
-            <FormLabel>Currency</FormLabel>
-            <Select name="currency" value={formData.currency} onChange={handleChange}>
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="INR">INR (₹)</option>
-              <option value="GBP">GBP (£)</option>
-            </Select>
-          </FormControl>
-        </HStack>
-
-        <FormControl isRequired>
-          <FormLabel>Mode of Payment</FormLabel>
-          <Select name="mode_of_payment" value={formData.mode_of_payment} onChange={handleChange}>
-            <option value="card">Card</option>
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="upi">UPI</option>
-            <option value="cash">Cash</option>
-            <option value="wallet">Wallet</option>
-            <option value="cheque">Cheque</option>
-          </Select>
-        </FormControl>
-
-        <FormControl isRequired>
-          <FormLabel>Category</FormLabel>
-          {isNewCategory ? (
-            <HStack>
-              <Input
+      {(isNewCategory || selectedCategory) && (
+        <>
+          {isNewSubcategory ? (
+            <View style={styles.row}>
+              <TextInput
+                label="New subcategory name"
+                value={newSubcategoryName}
+                onChangeText={setNewSubcategoryName}
+                style={[styles.input, styles.flex1]}
                 autoFocus
-                placeholder="New category name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
               />
               <Button
-                variant="outline"
-                onClick={() => {
-                  setIsNewCategory(false);
-                  setNewCategoryName('');
+                mode="outlined"
+                onPress={() => {
+                  setIsNewSubcategory(false);
+                  setNewSubcategoryName('');
                 }}
               >
                 Cancel
               </Button>
-            </HStack>
-          ) : (
-            <Select
-              name="category_id"
-              placeholder="Select category"
-              value={formData.category_id}
-              onChange={handleChange}
-            >
-              {categories?.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-              <option value={NEW_CATEGORY_VALUE}>+ Add new category</option>
-            </Select>
-          )}
-        </FormControl>
-
-        {!isNewCategory && selectedCategory && subcategories && subcategories.length > 0 && (
-          <FormControl>
-            <FormLabel>Subcategory</FormLabel>
-            <Select
-              name="subcategory_id"
-              placeholder="Select subcategory (optional)"
-              value={formData.subcategory_id}
-              onChange={handleChange}
-            >
-              <option value="">None</option>
-              {subcategories.map((subcat) => (
-                <option key={subcat.id} value={subcat.id}>
-                  {subcat.name}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        <FormControl isRequired>
-          <FormLabel>Date</FormLabel>
-          <Input
-            name="transaction_date"
-            type="date"
-            value={formData.transaction_date}
-            onChange={handleChange}
-          />
-        </FormControl>
-
-        <HStack spacing={4} w="full" justifyContent="flex-end">
-          {onCancel && (
-            <Button variant="outline" onClick={onCancel} isDisabled={isLoading}>
-              Cancel
+            </View>
+          ) : isNewCategory ? (
+            <Button mode="outlined" onPress={() => setIsNewSubcategory(true)} style={styles.input}>
+              + Add subcategory (optional)
             </Button>
+          ) : (
+            <DropdownField
+              label="Subcategory (optional)"
+              value={formData.subcategory_id}
+              options={subcategoryOptions}
+              onSelect={handleSubcategorySelect}
+            />
           )}
-          <Button
-            type="submit"
-            colorScheme="blue"
-            isLoading={isLoading}
-            loadingText={initialData ? 'Updating...' : 'Creating...'}
-          >
-            {initialData ? 'Update Transaction' : 'Add Transaction'}
+        </>
+      )}
+
+      <TextInput
+        label="Date *"
+        placeholder="YYYY-MM-DD"
+        value={formData.transaction_date}
+        onChangeText={(v) => setField('transaction_date', v)}
+        style={styles.input}
+      />
+
+      <View style={[styles.row, styles.actions]}>
+        {onCancel && (
+          <Button mode="outlined" onPress={onCancel} disabled={isLoading}>
+            Cancel
           </Button>
-        </HStack>
-      </VStack>
-    </Box>
+        )}
+        <Button mode="contained" onPress={handleSubmit} loading={isLoading} disabled={isLoading}>
+          {initialData ? 'Update Transaction' : 'Add Transaction'}
+        </Button>
+      </View>
+
+      <Snackbar {...snackbar.snackbarProps}>{snackbar.message}</Snackbar>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    borderRadius: 12,
+    gap: 16,
+  },
+  input: {
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  flex1: {
+    flex: 1,
+  },
+  actions: {
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+});

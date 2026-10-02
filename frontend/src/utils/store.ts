@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, Transaction, Category, EmailAccount } from '@types/index';
+import type { User, Transaction, Category } from '@app-types/index';
 
 interface AuthStore {
   user: User | null;

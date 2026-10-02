@@ -1,30 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import {
-  Box,
-  VStack,
-  HStack,
   Button,
-  Heading,
-  Badge,
   Text,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  ModalFooter,
-  useDisclosure,
-  useToast,
-  FormControl,
-  FormLabel,
-  Input,
-  Select,
-  Spinner,
-  Center,
-} from '@chakra-ui/react';
-import { apiClient } from '@utils/api';
+  Badge,
+  Portal,
+  Dialog,
+  TextInput,
+  Menu,
+  ActivityIndicator,
+  Snackbar,
+} from 'react-native-paper';
 import { format } from 'date-fns';
+import { useSnackbar } from '@utils/useSnackbar';
 
 interface EmailAccount {
   id: number;
@@ -35,19 +23,26 @@ interface EmailAccount {
   created_at: string;
 }
 
+const PROVIDERS = [
+  { value: 'gmail', label: 'Gmail (Google Account)' },
+  { value: 'outlook', label: 'Outlook / Microsoft' },
+  { value: 'icloud', label: 'iCloud Mail' },
+];
+
 export const EmailAccountManager: React.FC = () => {
-  const toast = useToast();
+  const snackbar = useSnackbar();
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<number | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [newAccount, setNewAccount] = useState({
     email_address: '',
     provider: 'gmail',
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchAccounts();
   }, []);
 
@@ -59,12 +54,7 @@ export const EmailAccountManager: React.FC = () => {
       // setAccounts(response.data);
       setAccounts([]);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load email accounts',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to load email accounts', status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -72,19 +62,13 @@ export const EmailAccountManager: React.FC = () => {
 
   const handleAddAccount = async () => {
     if (!newAccount.email_address) {
-      toast({
-        title: 'Error',
-        description: 'Please enter an email address',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Please enter an email address', status: 'error' });
       return;
     }
 
     try {
       // TODO: Implement OAuth flow for actual email provider
-      // For now, just show a placeholder
-      toast({
+      snackbar.show({
         title: 'Info',
         description: `OAuth flow for ${newAccount.provider} not yet implemented. This will be added in Phase 3.`,
         status: 'info',
@@ -92,37 +76,20 @@ export const EmailAccountManager: React.FC = () => {
       });
 
       setNewAccount({ email_address: '', provider: 'gmail' });
-      onClose();
+      setDialogVisible(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add email account',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to add email account', status: 'error' });
     }
   };
 
   const handleRemoveAccount = async (id: number) => {
-    if (confirm('Are you sure you want to remove this email account?')) {
-      try {
-        // TODO: Call API when connected
-        // await apiClient.removeEmailAccount(id);
-        setAccounts(accounts.filter((a) => a.id !== id));
-        toast({
-          title: 'Success',
-          description: 'Email account removed',
-          status: 'success',
-          duration: 2000,
-        });
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to remove email account',
-          status: 'error',
-          duration: 3000,
-        });
-      }
+    try {
+      // TODO: Call API when connected
+      // await apiClient.removeEmailAccount(id);
+      setAccounts(accounts.filter((a) => a.id !== id));
+      snackbar.show({ title: 'Success', description: 'Email account removed', status: 'success', duration: 2000 });
+    } catch (error) {
+      snackbar.show({ title: 'Error', description: 'Failed to remove email account', status: 'error' });
     }
   };
 
@@ -131,150 +98,190 @@ export const EmailAccountManager: React.FC = () => {
       setSyncing(id);
       // TODO: Call API when connected
       // await apiClient.syncEmailAccount(id);
-      toast({
-        title: 'Info',
-        description: 'Email sync not yet implemented. Will be added in Phase 3.',
-        status: 'info',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Info', description: 'Email sync not yet implemented. Will be added in Phase 3.', status: 'info' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to sync emails',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to sync emails', status: 'error' });
     } finally {
       setSyncing(null);
     }
   };
 
+  const selectedProviderLabel = PROVIDERS.find((p) => p.value === newAccount.provider)?.label;
+
   return (
-    <VStack spacing={6} align="stretch">
-      <HStack justify="space-between">
-        <Heading size="md">Connected Email Accounts</Heading>
-        <Button colorScheme="blue" onClick={onOpen}>
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text variant="titleMedium">Connected Email Accounts</Text>
+        <Button mode="contained" onPress={() => setDialogVisible(true)}>
           + Add Account
         </Button>
-      </HStack>
+      </View>
 
       {loading ? (
-        <Center h="200px">
-          <Spinner />
-        </Center>
+        <View style={styles.center}>
+          <ActivityIndicator />
+        </View>
       ) : accounts.length === 0 ? (
-        <Box p={8} bg="bg-secondary" borderRadius="lg" textAlign="center">
-          <Text color="gray.500" mb={4}>
-            No email accounts connected yet
-          </Text>
-          <Button colorScheme="blue" onClick={onOpen}>
+        <View style={styles.emptyBox}>
+          <Text style={styles.muted}>No email accounts connected yet</Text>
+          <Button mode="contained" onPress={() => setDialogVisible(true)}>
             Connect Your Email
           </Button>
-        </Box>
+        </View>
       ) : (
         accounts.map((account) => (
-          <Box key={account.id} p={4} bg="bg-secondary" borderRadius="lg">
-            <HStack justify="space-between" mb={3}>
-              <VStack align="start" spacing={1}>
-                <HStack>
-                  <Text fontWeight="bold">{account.email_address}</Text>
-                  {account.is_active && (
-                    <Badge colorScheme="green">Active</Badge>
-                  )}
-                </HStack>
-                <Text fontSize="sm" color="gray.500">
-                  Provider: {account.provider.toUpperCase()}
-                </Text>
+          <View key={account.id} style={styles.accountRow}>
+            <View style={styles.headerRow}>
+              <View style={{ gap: 4 }}>
+                <View style={styles.inlineRow}>
+                  <Text style={{ fontWeight: 'bold' }}>{account.email_address}</Text>
+                  {account.is_active && <Badge style={styles.activeBadge}>Active</Badge>}
+                </View>
+                <Text style={styles.mutedSmall}>Provider: {account.provider.toUpperCase()}</Text>
                 {account.last_synced_at && (
-                  <Text fontSize="sm" color="gray.500">
-                    Last synced:{' '}
-                    {format(new Date(account.last_synced_at), 'MMM dd, yyyy HH:mm')}
+                  <Text style={styles.mutedSmall}>
+                    Last synced: {format(new Date(account.last_synced_at), 'MMM dd, yyyy HH:mm')}
                   </Text>
                 )}
-              </VStack>
+              </View>
 
-              <HStack spacing={2}>
+              <View style={styles.inlineRow}>
                 <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleSyncAccount(account.id)}
-                  isLoading={syncing === account.id}
-                  loadingText="Syncing..."
+                  mode="outlined"
+                  compact
+                  onPress={() => handleSyncAccount(account.id)}
+                  loading={syncing === account.id}
                 >
                   Sync
                 </Button>
-                <Button
-                  size="sm"
-                  colorScheme="red"
-                  variant="ghost"
-                  onClick={() => handleRemoveAccount(account.id)}
-                >
+                <Button mode="text" textColor="#D32F2F" compact onPress={() => handleRemoveAccount(account.id)}>
                   Remove
                 </Button>
-              </HStack>
-            </HStack>
-          </Box>
+              </View>
+            </View>
+          </View>
         ))
       )}
 
-      {/* Add Email Account Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Connect Email Account</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <Box p={4} bg="blue.50" borderRadius="lg" w="full">
-                <Text fontSize="sm" color="blue.800">
-                  <strong>Note:</strong> OAuth2 authentication will be implemented in Phase 3.
-                  Currently showing UI placeholder.
+      <Portal>
+        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
+          <Dialog.Title>Connect Email Account</Dialog.Title>
+          <Dialog.Content>
+            <View style={{ gap: 16 }}>
+              <View style={styles.noteBox}>
+                <Text style={styles.noteText}>
+                  Note: OAuth2 authentication will be implemented in Phase 3. Currently showing UI
+                  placeholder.
                 </Text>
-              </Box>
+              </View>
 
-              <FormControl>
-                <FormLabel>Email Provider</FormLabel>
-                <Select
-                  value={newAccount.provider}
-                  onChange={(e) =>
-                    setNewAccount({ ...newAccount, provider: e.target.value })
-                  }
-                >
-                  <option value="gmail">Gmail (Google Account)</option>
-                  <option value="outlook">Outlook / Microsoft</option>
-                  <option value="icloud">iCloud Mail</option>
-                </Select>
-              </FormControl>
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <TextInput
+                    label="Email Provider"
+                    value={selectedProviderLabel || ''}
+                    editable={false}
+                    right={<TextInput.Icon icon="menu-down" onPress={() => setMenuVisible(true)} />}
+                    onPressIn={() => setMenuVisible(true)}
+                  />
+                }
+              >
+                {PROVIDERS.map((p) => (
+                  <Menu.Item
+                    key={p.value}
+                    title={p.label}
+                    onPress={() => {
+                      setNewAccount({ ...newAccount, provider: p.value });
+                      setMenuVisible(false);
+                    }}
+                  />
+                ))}
+              </Menu>
 
-              <FormControl>
-                <FormLabel>Email Address</FormLabel>
-                <Input
-                  placeholder="your.email@gmail.com"
-                  value={newAccount.email_address}
-                  onChange={(e) =>
-                    setNewAccount({ ...newAccount, email_address: e.target.value })
-                  }
-                />
-              </FormControl>
+              <TextInput
+                label="Email Address"
+                placeholder="your.email@gmail.com"
+                value={newAccount.email_address}
+                onChangeText={(v) => setNewAccount({ ...newAccount, email_address: v })}
+              />
 
-              <Box p={4} bg="yellow.50" borderRadius="lg" w="full">
-                <Text fontSize="xs" color="yellow.800">
+              <View style={styles.warnBox}>
+                <Text style={styles.warnText}>
                   Click "Connect" to open your email provider's login. We'll never store your
                   password.
                 </Text>
-              </Box>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleAddAccount}>
-              Connect Account
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </VStack>
+              </View>
+            </View>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDialogVisible(false)}>Cancel</Button>
+            <Button onPress={handleAddAccount}>Connect Account</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Snackbar {...snackbar.snackbarProps}>{snackbar.message}</Snackbar>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    gap: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  center: {
+    minHeight: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    padding: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 12,
+  },
+  accountRow: {
+    padding: 16,
+    borderRadius: 12,
+  },
+  muted: {
+    color: '#888',
+  },
+  mutedSmall: {
+    color: '#888',
+    fontSize: 12,
+  },
+  activeBadge: {
+    backgroundColor: '#2E7D32',
+  },
+  noteBox: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#E3F2FD',
+  },
+  noteText: {
+    color: '#0D47A1',
+    fontSize: 13,
+  },
+  warnBox: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#FFF8E1',
+  },
+  warnText: {
+    color: '#856404',
+    fontSize: 11,
+  },
+});

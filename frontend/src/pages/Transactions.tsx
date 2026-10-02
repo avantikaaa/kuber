@@ -1,17 +1,22 @@
 import React from 'react';
-import { Container, VStack, Box } from '@chakra-ui/react';
+import { ScrollView, StyleSheet } from 'react-native';
 import { TransactionList } from '../components/TransactionList';
 
 export const TransactionsPage: React.FC = () => {
   return (
-    <Container maxW="6xl" py={8}>
-      <VStack spacing={6} align="stretch">
-        <Box>
-          <TransactionList />
-        </Box>
-      </VStack>
-    </Container>
+    <ScrollView contentContainerStyle={styles.container}>
+      <TransactionList />
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    maxWidth: 1000,
+    alignSelf: 'center',
+    width: '100%',
+  },
+});
 
 export default TransactionsPage;

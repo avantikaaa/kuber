@@ -1,18 +1,10 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Button,
-  HStack,
-  VStack,
-  Text,
-  Heading,
-  useToast,
-  Spinner,
-  Center,
-} from '@chakra-ui/react';
-import { PieChart, Pie, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { Button, Text, ActivityIndicator, Snackbar, useTheme } from 'react-native-paper';
+import { PieChart, LineChart } from 'react-native-chart-kit';
 import { apiClient } from '@utils/api';
 import { getCategoryColor } from '@utils/theme';
+import { useSnackbar } from '@utils/useSnackbar';
 
 interface SpendingData {
   id: number;
@@ -29,10 +21,14 @@ interface TrendData {
   count: number;
 }
 
+const PERIODS = ['7', '30', '90', '180'] as const;
+const periodLabel = (p: string) => (p === '7' ? '7d' : p === '30' ? '30d' : p === '90' ? '90d' : '6m');
+
 export const SpendingChart: React.FC = () => {
-  const toast = useToast();
+  const theme = useTheme();
+  const snackbar = useSnackbar();
   const [view, setView] = useState<'pie' | 'trend'>('pie');
-  const [period, setPeriod] = useState<'7' | '30' | '90' | '180'>('30');
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]>('30');
   const [data, setData] = useState<SpendingData[] | TrendData[]>([]);
   const [total, setTotal] = useState('0');
   const [loading, setLoading] = useState(false);
@@ -44,132 +40,159 @@ export const SpendingChart: React.FC = () => {
       setData(response.data.data ?? response.data);
       setTotal(response.data.total || '0');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load spending data',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to load spending data', status: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchData(view, period);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, period]);
+
+  const screenWidth = Dimensions.get('window').width - 48;
 
   if (loading) {
     return (
-      <Center h="400px">
-        <Spinner size="lg" color="brand.light.primary" />
-      </Center>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
     );
   }
 
   return (
-    <VStack spacing={6} align="stretch">
-      <Box>
-        <Heading size="lg" mb={4}>
-          Spending Analytics
-        </Heading>
+    <View style={styles.container}>
+      <Text variant="headlineSmall" style={styles.heading}>
+        Spending Analytics
+      </Text>
 
-        {/* Controls */}
-        <HStack spacing={4} mb={6} flexWrap="wrap">
-          <HStack spacing={2}>
-            <Text fontWeight="bold">View:</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.controlsRow}>
+        <View style={styles.controlGroup}>
+          <Text style={styles.controlLabel}>View:</Text>
+          <Button mode={view === 'pie' ? 'contained' : 'outlined'} onPress={() => setView('pie')} compact style={styles.controlBtn}>
+            Distribution
+          </Button>
+          <Button mode={view === 'trend' ? 'contained' : 'outlined'} onPress={() => setView('trend')} compact style={styles.controlBtn}>
+            Trend
+          </Button>
+        </View>
+        <View style={styles.controlGroup}>
+          <Text style={styles.controlLabel}>Period:</Text>
+          {PERIODS.map((p) => (
             <Button
-              size="sm"
-              variant={view === 'pie' ? 'solid' : 'outline'}
-              onClick={() => setView('pie')}
+              key={p}
+              mode={period === p ? 'contained' : 'outlined'}
+              onPress={() => setPeriod(p)}
+              compact
+              style={styles.controlBtn}
             >
-              Distribution
+              {periodLabel(p)}
             </Button>
-            <Button
-              size="sm"
-              variant={view === 'trend' ? 'solid' : 'outline'}
-              onClick={() => setView('trend')}
-            >
-              Trend
-            </Button>
-          </HStack>
+          ))}
+        </View>
+      </ScrollView>
 
-          <HStack spacing={2}>
-            <Text fontWeight="bold">Period:</Text>
-            {(['7', '30', '90', '180'] as const).map((p) => (
-              <Button
-                key={p}
-                size="sm"
-                variant={period === p ? 'solid' : 'outline'}
-                onClick={() => setPeriod(p)}
-              >
-                {p === '7' ? '7d' : p === '30' ? '30d' : p === '90' ? '90d' : '6m'}
-              </Button>
-            ))}
-          </HStack>
-        </HStack>
-      </Box>
-
-      {/* Chart */}
-      <Box bg="bg-secondary" p={6} borderRadius="lg" h="400px">
+      <View style={[styles.chartBox, { backgroundColor: theme.colors.surface }]}>
         {data.length === 0 ? (
-          <Center h="full">
-            <Text color="gray.500">No data available for this period</Text>
-          </Center>
+          <View style={styles.center}>
+            <Text style={styles.muted}>No data available for this period</Text>
+          </View>
         ) : view === 'pie' ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data as SpendingData[]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percentage }) => `${name}: ${percentage}%`}
-                outerRadius={120}
-                fill="#8884d8"
-                dataKey="total"
-              >
-                {(data as SpendingData[]).map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || getCategoryColor(index)} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-            </PieChart>
-          </ResponsiveContainer>
+          <PieChart
+            data={(data as SpendingData[]).map((entry, index) => ({
+              name: entry.name,
+              population: entry.total,
+              color: entry.color || getCategoryColor(index),
+              legendFontColor: theme.colors.onSurface,
+              legendFontSize: 12,
+            }))}
+            width={screenWidth}
+            height={260}
+            chartConfig={chartConfig}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="8"
+          />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data as TrendData[]}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="#1A1A3E"
-                strokeWidth={2}
-                name="Spending"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <LineChart
+            data={{
+              labels: (data as TrendData[]).map((d) => d.date.slice(5)),
+              datasets: [{ data: (data as TrendData[]).map((d) => d.total) }],
+            }}
+            width={screenWidth}
+            height={260}
+            chartConfig={chartConfig}
+            bezier
+          />
         )}
-      </Box>
+      </View>
 
-      {/* Summary */}
-      <Box bg="bg-secondary" p={6} borderRadius="lg">
-        <VStack align="start" spacing={2}>
-          <Text fontSize="sm" color="gray.500" fontWeight="bold">
-            TOTAL SPENDING
-          </Text>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.light.primary">
-            ${parseFloat(total).toFixed(2)}
-          </Text>
-          <Text fontSize="sm" color="gray.500">
-            Last {period === '7' ? '7 days' : period === '30' ? '30 days' : period === '90' ? '90 days' : '6 months'}
-          </Text>
-        </VStack>
-      </Box>
-    </VStack>
+      <View style={[styles.summaryBox, { backgroundColor: theme.colors.surface }]}>
+        <Text style={styles.muted}>TOTAL SPENDING</Text>
+        <Text variant="displaySmall" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+          ${parseFloat(total).toFixed(2)}
+        </Text>
+        <Text style={styles.muted}>
+          Last {period === '7' ? '7 days' : period === '30' ? '30 days' : period === '90' ? '90 days' : '6 months'}
+        </Text>
+      </View>
+
+      <Snackbar {...snackbar.snackbarProps}>{snackbar.message}</Snackbar>
+    </View>
   );
 };
+
+const chartConfig = {
+  backgroundGradientFrom: '#ffffff',
+  backgroundGradientTo: '#ffffff',
+  color: (opacity = 1) => `rgba(26, 26, 62, ${opacity})`,
+  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  decimalPlaces: 2,
+};
+
+const styles = StyleSheet.create({
+  container: {
+    gap: 16,
+  },
+  heading: {
+    fontWeight: 'bold',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+  },
+  controlGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginRight: 16,
+  },
+  controlLabel: {
+    fontWeight: 'bold',
+  },
+  controlBtn: {
+    marginRight: 4,
+  },
+  chartBox: {
+    padding: 16,
+    borderRadius: 12,
+    minHeight: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryBox: {
+    padding: 24,
+    borderRadius: 12,
+    gap: 4,
+  },
+  center: {
+    minHeight: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  muted: {
+    color: '#888',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+});

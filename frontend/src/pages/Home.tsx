@@ -1,62 +1,82 @@
 import React from 'react';
-import { Container, VStack, Box, Heading, Grid, GridItem, Button, HStack } from '@chakra-ui/react';
+import { ScrollView, View, StyleSheet } from 'react-native';
+import { Button, Text, useTheme } from 'react-native-paper';
+import { useAppNavigation } from '@utils/navigation';
 import { SpendingChart } from '../components/SpendingChart';
-import { Link } from 'react-router-dom';
 
 export const HomePage: React.FC = () => {
+  const router = useAppNavigation();
+  const theme = useTheme();
+
   return (
-    <Container maxW="6xl" py={8}>
-      <VStack spacing={8} align="stretch">
-        {/* Header */}
-        <Box>
-          <Heading size="2xl" mb={2}>
-            Finance Dashboard
-          </Heading>
-          <HStack spacing={4}>
-            <Button as={Link} to="/add-transaction" colorScheme="blue">
-              + Add Transaction
-            </Button>
-            <Button as={Link} to="/transactions" variant="outline">
-              View All Transactions
-            </Button>
-          </HStack>
-        </Box>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View>
+        <Text variant="displaySmall" style={styles.heading}>
+          Finance Dashboard
+        </Text>
+        <View style={styles.actionsRow}>
+          <Button mode="contained" onPress={() => router.push('/add-transaction')}>
+            + Add Transaction
+          </Button>
+          <Button mode="outlined" onPress={() => router.push('/transactions')}>
+            View All Transactions
+          </Button>
+        </View>
+      </View>
 
-        {/* Analytics */}
-        <SpendingChart />
+      <SpendingChart />
 
-        {/* Quick Stats (to be populated with real data) */}
-        <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={6}>
-          <GridItem bg="bg-secondary" p={6} borderRadius="lg">
-            <Box mb={2} fontSize="sm" color="gray.500" fontWeight="bold">
-              TRANSACTIONS THIS MONTH
-            </Box>
-            <Box fontSize="2xl" fontWeight="bold">
-              --
-            </Box>
-          </GridItem>
-
-          <GridItem bg="bg-secondary" p={6} borderRadius="lg">
-            <Box mb={2} fontSize="sm" color="gray.500" fontWeight="bold">
-              AVERAGE TRANSACTION
-            </Box>
-            <Box fontSize="2xl" fontWeight="bold">
-              --
-            </Box>
-          </GridItem>
-
-          <GridItem bg="bg-secondary" p={6} borderRadius="lg">
-            <Box mb={2} fontSize="sm" color="gray.500" fontWeight="bold">
-              TOP CATEGORY
-            </Box>
-            <Box fontSize="2xl" fontWeight="bold">
-              --
-            </Box>
-          </GridItem>
-        </Grid>
-      </VStack>
-    </Container>
+      <View style={styles.statsGrid}>
+        {[
+          { label: 'TRANSACTIONS THIS MONTH', value: '--' },
+          { label: 'AVERAGE TRANSACTION', value: '--' },
+          { label: 'TOP CATEGORY', value: '--' },
+        ].map((stat) => (
+          <View key={stat.label} style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
+            <Text style={styles.statLabel}>{stat.label}</Text>
+            <Text variant="headlineSmall" style={styles.statValue}>
+              {stat.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    gap: 32,
+  },
+  heading: {
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  statCard: {
+    flexGrow: 1,
+    minWidth: 180,
+    padding: 24,
+    borderRadius: 12,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#888',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontWeight: 'bold',
+  },
+});
 
 export default HomePage;

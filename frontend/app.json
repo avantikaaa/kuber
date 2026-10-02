@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Finance Tracker",
+    "slug": "finance-tracker",
+    "version": "0.1.0",
+    "scheme": "financetracker",
+    "ios": {
+      "supportsTabletMode": true,
+      "requireFullScreen": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app requires location access for some features"
+      }
+    },
+    "android": {
+      "permissions": [
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ]
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

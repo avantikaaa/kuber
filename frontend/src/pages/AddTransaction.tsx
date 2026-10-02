@@ -1,32 +1,50 @@
 import React from 'react';
-import { Container, Heading, VStack, Box, Divider } from '@chakra-ui/react';
+import { ScrollView, View, StyleSheet } from 'react-native';
+import { Text, Divider, useTheme } from 'react-native-paper';
 import { TransactionForm } from '../components/TransactionForm';
 import { EmailSuggestions } from '../components/EmailSuggestions';
 
 export const AddTransactionPage: React.FC = () => {
+  const theme = useTheme();
+
   return (
-    <Container maxW="2xl" py={8}>
-      <VStack spacing={8} align="stretch">
-        {/* Email Suggestions */}
-        <Box>
-          <Heading size="md" mb={6}>
-            📧 Suggested from Email
-          </Heading>
-          <EmailSuggestions />
-        </Box>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View>
+        <Text variant="titleMedium" style={styles.heading}>
+          📧 Suggested from Email
+        </Text>
+        <EmailSuggestions />
+      </View>
 
-        <Divider />
+      <Divider />
 
-        {/* Manual Entry Form */}
-        <Box>
-          <Heading size="xl" mb={6}>
-            + Add Transaction Manually
-          </Heading>
+      <View>
+        <Text variant="headlineMedium" style={styles.heading}>
+          + Add Transaction Manually
+        </Text>
+        <View style={[styles.formWrap, { backgroundColor: theme.colors.surface }]}>
           <TransactionForm />
-        </Box>
-      </VStack>
-    </Container>
+        </View>
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    gap: 32,
+    maxWidth: 720,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  heading: {
+    marginBottom: 24,
+    fontWeight: 'bold',
+  },
+  formWrap: {
+    borderRadius: 12,
+  },
+});
 
 export default AddTransactionPage;

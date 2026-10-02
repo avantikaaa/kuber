@@ -1,44 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { ScrollView, View, StyleSheet } from 'react-native';
 import {
-  Container,
-  Box,
-  VStack,
-  Heading,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
   Text,
-  HStack,
+  TextInput,
+  Button,
+  HelperText,
   Divider,
-  useToast,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  FormErrorMessage,
-} from '@chakra-ui/react';
+  SegmentedButtons,
+  Snackbar,
+} from 'react-native-paper';
 import { apiClient } from '@utils/api';
 import { useAuthStore } from '@utils/store';
+import { useSnackbar } from '@utils/useSnackbar';
+import { useAppNavigation } from '@utils/navigation';
 
 export const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const toast = useToast();
+  const router = useAppNavigation();
+  const snackbar = useSnackbar();
   const { setToken, setUser } = useAuthStore();
 
-  const [tabIndex, setTabIndex] = useState(0);
+  const [tab, setTab] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Login form
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: '',
-  });
-
-  // Signup form
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({
     username: '',
     email: '',
@@ -46,29 +31,20 @@ export const LoginPage: React.FC = () => {
     confirmPassword: '',
   });
 
-  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const setLoginField = (name: string, value: string) => {
     setLoginData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const handleSignupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const setSignupField = (name: string, value: string) => {
     setSignupData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async () => {
     const newErrors: Record<string, string> = {};
-
     if (!loginData.email) newErrors.email = 'Email is required';
     if (!loginData.password) newErrors.password = 'Password is required';
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -78,34 +54,19 @@ export const LoginPage: React.FC = () => {
     try {
       const response = await apiClient.login(loginData.email, loginData.password);
       const { token, user } = response.data;
-
       setToken(token);
       setUser(user);
-
-      toast({
-        title: 'Success',
-        description: 'Logged in successfully',
-        status: 'success',
-        duration: 2000,
-      });
-
-      navigate('/');
+      snackbar.show({ title: 'Success', description: 'Logged in successfully', status: 'success', duration: 2000 });
+      router.replace('/');
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Login failed',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: error.response?.data?.error || 'Login failed', status: 'error' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignup = async () => {
     const newErrors: Record<string, string> = {};
-
     if (!signupData.username) newErrors.username = 'Username is required';
     if (!signupData.email) newErrors.email = 'Email is required';
     if (!signupData.password) newErrors.password = 'Password is required';
@@ -115,7 +76,6 @@ export const LoginPage: React.FC = () => {
     if (signupData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -123,199 +83,175 @@ export const LoginPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await apiClient.signup(
-        signupData.username,
-        signupData.email,
-        signupData.password
-      );
+      const response = await apiClient.signup(signupData.username, signupData.email, signupData.password);
       const { token, user } = response.data;
-
       setToken(token);
       setUser(user);
-
-      toast({
-        title: 'Success',
-        description: 'Account created successfully',
-        status: 'success',
-        duration: 2000,
-      });
-
-      navigate('/');
+      snackbar.show({ title: 'Success', description: 'Account created successfully', status: 'success', duration: 2000 });
+      router.replace('/');
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Signup failed',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: error.response?.data?.error || 'Signup failed', status: 'error' });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Container maxW="sm" py={20}>
-      <VStack spacing={8}>
-        <Box textAlign="center">
-          <Heading size="2xl" mb={2}>
-            💰 Finance Tracker
-          </Heading>
-          <Text color="gray.600">Manage your finances intelligently</Text>
-        </Box>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.headerBlock}>
+        <Text variant="displaySmall">💰 Finance Tracker</Text>
+        <Text style={styles.subtitle}>Manage your finances intelligently</Text>
+      </View>
 
-        <Tabs index={tabIndex} onChange={setTabIndex} w="full">
-          <TabList mb="1em">
-            <Tab flex={1}>Sign In</Tab>
-            <Tab flex={1}>Sign Up</Tab>
-          </TabList>
+      <SegmentedButtons
+        value={tab}
+        onValueChange={(v) => setTab(v as 'signin' | 'signup')}
+        buttons={[
+          { value: 'signin', label: 'Sign In' },
+          { value: 'signup', label: 'Sign Up' },
+        ]}
+        style={styles.tabs}
+      />
 
-          <TabPanels>
-            {/* Sign In Tab */}
-            <TabPanel>
-              <Box as="form" onSubmit={handleLogin} w="full" p={8} bg="bg-secondary" borderRadius="lg">
-                <VStack spacing={6}>
-                  <FormControl isRequired isInvalid={!!errors.email}>
-                    <FormLabel>Email Address</FormLabel>
-                    <Input
-                      name="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={loginData.email}
-                      onChange={handleLoginChange}
-                    />
-                    {errors.email && <FormErrorMessage>{errors.email}</FormErrorMessage>}
-                  </FormControl>
+      {tab === 'signin' ? (
+        <View style={styles.form}>
+          <TextInput
+            label="Email Address *"
+            placeholder="you@example.com"
+            value={loginData.email}
+            onChangeText={(v) => setLoginField('email', v)}
+            error={!!errors.email}
+          />
+          <HelperText type="error" visible={!!errors.email}>
+            {errors.email}
+          </HelperText>
 
-                  <FormControl isRequired isInvalid={!!errors.password}>
-                    <FormLabel>Password</FormLabel>
-                    <Input
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={loginData.password}
-                      onChange={handleLoginChange}
-                    />
-                    {errors.password && <FormErrorMessage>{errors.password}</FormErrorMessage>}
-                  </FormControl>
+          <TextInput
+            label="Password *"
+            placeholder="••••••••"
+            secureTextEntry
+            value={loginData.password}
+            onChangeText={(v) => setLoginField('password', v)}
+            error={!!errors.password}
+          />
+          <HelperText type="error" visible={!!errors.password}>
+            {errors.password}
+          </HelperText>
 
-                  <Button
-                    type="submit"
-                    colorScheme="blue"
-                    w="full"
-                    isLoading={isLoading}
-                    loadingText="Signing in..."
-                  >
-                    Sign In
-                  </Button>
+          <Button mode="contained" onPress={handleLogin} loading={isLoading} disabled={isLoading}>
+            Sign In
+          </Button>
 
-                  <Divider />
+          <Divider style={styles.divider} />
 
-                  <HStack spacing={2} justify="center" w="full">
-                    <Text color="gray.600" fontSize="sm">
-                      Don't have an account?
-                    </Text>
-                    <Button
-                      variant="link"
-                      colorScheme="blue"
-                      size="sm"
-                      onClick={() => setTabIndex(1)}
-                    >
-                      Sign up
-                    </Button>
-                  </HStack>
-                </VStack>
-              </Box>
-            </TabPanel>
+          <View style={styles.switchRow}>
+            <Text style={styles.subtitle}>Don't have an account?</Text>
+            <Button mode="text" compact onPress={() => setTab('signup')}>
+              Sign up
+            </Button>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.form}>
+          <TextInput
+            label="Username *"
+            placeholder="your username"
+            value={signupData.username}
+            onChangeText={(v) => setSignupField('username', v)}
+            error={!!errors.username}
+          />
+          <HelperText type="error" visible={!!errors.username}>
+            {errors.username}
+          </HelperText>
 
-            {/* Sign Up Tab */}
-            <TabPanel>
-              <Box as="form" onSubmit={handleSignup} w="full" p={8} bg="bg-secondary" borderRadius="lg">
-                <VStack spacing={6}>
-                  <FormControl isRequired isInvalid={!!errors.username}>
-                    <FormLabel>Username</FormLabel>
-                    <Input
-                      name="username"
-                      placeholder="your username"
-                      value={signupData.username}
-                      onChange={handleSignupChange}
-                    />
-                    {errors.username && <FormErrorMessage>{errors.username}</FormErrorMessage>}
-                  </FormControl>
+          <TextInput
+            label="Email Address *"
+            placeholder="you@example.com"
+            value={signupData.email}
+            onChangeText={(v) => setSignupField('email', v)}
+            error={!!errors.email}
+          />
+          <HelperText type="error" visible={!!errors.email}>
+            {errors.email}
+          </HelperText>
 
-                  <FormControl isRequired isInvalid={!!errors.email}>
-                    <FormLabel>Email Address</FormLabel>
-                    <Input
-                      name="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={signupData.email}
-                      onChange={handleSignupChange}
-                    />
-                    {errors.email && <FormErrorMessage>{errors.email}</FormErrorMessage>}
-                  </FormControl>
+          <TextInput
+            label="Password *"
+            placeholder="••••••••"
+            secureTextEntry
+            value={signupData.password}
+            onChangeText={(v) => setSignupField('password', v)}
+            error={!!errors.password}
+          />
+          <HelperText type={errors.password ? 'error' : 'info'} visible>
+            {errors.password || 'Min 8 chars, uppercase, lowercase, and number'}
+          </HelperText>
 
-                  <FormControl isRequired isInvalid={!!errors.password}>
-                    <FormLabel>Password</FormLabel>
-                    <Input
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signupData.password}
-                      onChange={handleSignupChange}
-                    />
-                    {errors.password && <FormErrorMessage>{errors.password}</FormErrorMessage>}
-                    <Text fontSize="xs" color="gray.500" mt={2}>
-                      Min 8 chars, uppercase, lowercase, and number
-                    </Text>
-                  </FormControl>
+          <TextInput
+            label="Confirm Password *"
+            placeholder="••••••••"
+            secureTextEntry
+            value={signupData.confirmPassword}
+            onChangeText={(v) => setSignupField('confirmPassword', v)}
+            error={!!errors.confirmPassword}
+          />
+          <HelperText type="error" visible={!!errors.confirmPassword}>
+            {errors.confirmPassword}
+          </HelperText>
 
-                  <FormControl isRequired isInvalid={!!errors.confirmPassword}>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <Input
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signupData.confirmPassword}
-                      onChange={handleSignupChange}
-                    />
-                    {errors.confirmPassword && (
-                      <FormErrorMessage>{errors.confirmPassword}</FormErrorMessage>
-                    )}
-                  </FormControl>
+          <Button mode="contained" onPress={handleSignup} loading={isLoading} disabled={isLoading}>
+            Sign Up
+          </Button>
 
-                  <Button
-                    type="submit"
-                    colorScheme="blue"
-                    w="full"
-                    isLoading={isLoading}
-                    loadingText="Creating account..."
-                  >
-                    Sign Up
-                  </Button>
+          <Divider style={styles.divider} />
 
-                  <Divider />
+          <View style={styles.switchRow}>
+            <Text style={styles.subtitle}>Already have an account?</Text>
+            <Button mode="text" compact onPress={() => setTab('signin')}>
+              Sign in
+            </Button>
+          </View>
+        </View>
+      )}
 
-                  <HStack spacing={2} justify="center" w="full">
-                    <Text color="gray.600" fontSize="sm">
-                      Already have an account?
-                    </Text>
-                    <Button
-                      variant="link"
-                      colorScheme="blue"
-                      size="sm"
-                      onClick={() => setTabIndex(0)}
-                    >
-                      Sign in
-                    </Button>
-                  </HStack>
-                </VStack>
-              </Box>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </VStack>
-    </Container>
+      <Snackbar {...snackbar.snackbarProps}>{snackbar.message}</Snackbar>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    paddingTop: 80,
+    gap: 32,
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  headerBlock: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  subtitle: {
+    color: '#888',
+  },
+  tabs: {
+    width: '100%',
+  },
+  form: {
+    gap: 4,
+    padding: 32,
+    borderRadius: 12,
+  },
+  divider: {
+    marginVertical: 16,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+});
 
 export default LoginPage;

@@ -1,31 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import {
-  Box,
-  VStack,
-  HStack,
   Button,
-  Heading,
-  Badge,
   Text,
   Card,
-  CardBody,
-  Spinner,
-  Center,
-  useToast,
-  Select,
-  FormControl,
-  FormLabel,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  ModalFooter,
-  useDisclosure,
-} from '@chakra-ui/react';
-import { apiClient } from '@utils/api';
+  ActivityIndicator,
+  Portal,
+  Dialog,
+  Menu,
+  TextInput,
+  Snackbar,
+} from 'react-native-paper';
 import { useCategories } from '@hooks/useCategories';
+import { useSnackbar } from '@utils/useSnackbar';
+import type { Category } from '../types';
 
 interface EmailSuggestion {
   id: number;
@@ -36,17 +24,18 @@ interface EmailSuggestion {
 }
 
 export const EmailSuggestions: React.FC = () => {
-  const toast = useToast();
+  const snackbar = useSnackbar();
   const [suggestions, setSuggestions] = useState<EmailSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<EmailSuggestion | null>(null);
   const [categoryId, setCategoryId] = useState('');
   const [importing, setImporting] = useState(false);
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { data: categories = [] } = useCategories();
+  const { data: categories = [] as Category[] } = useCategories();
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchSuggestions();
   }, []);
 
@@ -58,12 +47,7 @@ export const EmailSuggestions: React.FC = () => {
       // setSuggestions(response.data);
       setSuggestions([]);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load email suggestions',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to load email suggestions', status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -71,12 +55,7 @@ export const EmailSuggestions: React.FC = () => {
 
   const handleImport = async (emailId: string) => {
     if (!categoryId) {
-      toast({
-        title: 'Error',
-        description: 'Please select a category',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Please select a category', status: 'error' });
       return;
     }
 
@@ -85,23 +64,16 @@ export const EmailSuggestions: React.FC = () => {
       // TODO: Call API when connected
       // await apiClient.createTransactionFromEmail(emailId, { categoryId: parseInt(categoryId) });
 
-      toast({
+      snackbar.show({
         title: 'Info',
         description: 'Email import not yet fully implemented. Will be added in Phase 3.',
         status: 'info',
-        duration: 3000,
       });
 
-      // Remove from suggestions
       setSuggestions(suggestions.filter((s) => s.email_id !== emailId));
-      onClose();
+      setDialogVisible(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to import email',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to import email', status: 'error' });
     } finally {
       setImporting(false);
     }
@@ -112,146 +84,172 @@ export const EmailSuggestions: React.FC = () => {
       // TODO: Call API when connected
       // await apiClient.skipEmailSuggestion(emailId);
       setSuggestions(suggestions.filter((s) => s.email_id !== emailId));
-      toast({
-        title: 'Success',
-        description: 'Email skipped',
-        status: 'success',
-        duration: 2000,
-      });
+      snackbar.show({ title: 'Success', description: 'Email skipped', status: 'success', duration: 2000 });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to skip email',
-        status: 'error',
-        duration: 3000,
-      });
+      snackbar.show({ title: 'Error', description: 'Failed to skip email', status: 'error' });
     }
   };
 
   const handleQuickAdd = (email: EmailSuggestion) => {
     setSelectedEmail(email);
     setCategoryId('');
-    onOpen();
+    setDialogVisible(true);
   };
 
   if (loading) {
     return (
-      <Center h="200px">
-        <Spinner />
-      </Center>
+      <View style={styles.center}>
+        <ActivityIndicator />
+      </View>
     );
   }
 
   if (suggestions.length === 0) {
     return (
-      <Box p={8} bg="bg-secondary" borderRadius="lg" textAlign="center">
-        <Text color="gray.500" mb={4}>
-          No pending email imports
-        </Text>
-        <Text fontSize="sm" color="gray.400">
+      <View style={styles.emptyBox}>
+        <Text style={styles.muted}>No pending email imports</Text>
+        <Text style={styles.mutedSmall}>
           Connect an email account and sync to see transaction suggestions
         </Text>
-      </Box>
+      </View>
     );
   }
 
+  const selectedCategoryLabel = categories.find((c: Category) => String(c.id) === categoryId)?.name;
+
   return (
-    <VStack spacing={6} align="stretch">
-      <Heading size="md">Suggested from Email</Heading>
+    <View style={styles.container}>
+      <Text variant="titleMedium">Suggested from Email</Text>
 
-      <VStack spacing={4}>
-        {suggestions.map((email) => (
-          <Card key={email.id} w="full">
-            <CardBody>
-              <VStack align="start" spacing={2}>
-                <Box>
-                  <Heading size="sm" mb={1}>
-                    {email.email_subject}
-                  </Heading>
-                  <Text fontSize="sm" color="gray.600" noOfLines={2}>
-                    {email.email_body}
-                  </Text>
-                </Box>
+      {suggestions.map((email) => (
+        <Card key={email.id} style={styles.card}>
+          <Card.Content>
+            <Text variant="titleSmall">{email.email_subject}</Text>
+            <Text numberOfLines={2} style={styles.mutedBody}>
+              {email.email_body}
+            </Text>
+            <View style={styles.cardActions}>
+              <Button mode="contained" onPress={() => handleQuickAdd(email)} compact>
+                Quick Add
+              </Button>
+              <Button mode="outlined" onPress={() => handleSkip(email.email_id)} compact>
+                Skip
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+      ))}
 
-                <HStack spacing={2} w="full" justify="flex-end">
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    onClick={() => handleQuickAdd(email)}
-                  >
-                    Quick Add
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleSkip(email.email_id)}
-                  >
-                    Skip
-                  </Button>
-                </HStack>
-              </VStack>
-            </CardBody>
-          </Card>
-        ))}
-      </VStack>
-
-      {/* Import Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Import from Email</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
+      <Portal>
+        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
+          <Dialog.Title>Import from Email</Dialog.Title>
+          <Dialog.Content>
             {selectedEmail && (
-              <VStack spacing={4} align="start">
-                <Box>
-                  <Text fontSize="sm" color="gray.500" fontWeight="bold">
-                    EMAIL SUBJECT
-                  </Text>
-                  <Text mb={4}>{selectedEmail.email_subject}</Text>
-                </Box>
+              <View style={{ gap: 12 }}>
+                <View>
+                  <Text style={styles.mutedSmallBold}>EMAIL SUBJECT</Text>
+                  <Text>{selectedEmail.email_subject}</Text>
+                </View>
 
-                <FormControl isRequired>
-                  <FormLabel>Category</FormLabel>
-                  <Select
-                    placeholder="Select a category"
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Menu
+                  visible={menuVisible}
+                  onDismiss={() => setMenuVisible(false)}
+                  anchor={
+                    <TextInput
+                      label="Category *"
+                      value={selectedCategoryLabel || ''}
+                      editable={false}
+                      right={<TextInput.Icon icon="menu-down" onPress={() => setMenuVisible(true)} />}
+                      onPressIn={() => setMenuVisible(true)}
+                    />
+                  }
+                >
+                  {categories.map((cat: Category) => (
+                    <Menu.Item
+                      key={cat.id}
+                      title={cat.name}
+                      onPress={() => {
+                        setCategoryId(String(cat.id));
+                        setMenuVisible(false);
+                      }}
+                    />
+                  ))}
+                </Menu>
 
-                <Box p={4} bg="blue.50" borderRadius="lg" w="full">
-                  <Text fontSize="sm" color="blue.800">
-                    <strong>Note:</strong> Email parsing is not fully implemented yet. A basic
-                    transaction will be created. Full extraction coming in Phase 3.
+                <View style={styles.noteBox}>
+                  <Text style={styles.noteText}>
+                    Note: Email parsing is not fully implemented yet. A basic transaction will be
+                    created. Full extraction coming in Phase 3.
                   </Text>
-                </Box>
-              </VStack>
+                </View>
+              </View>
             )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDialogVisible(false)}>Cancel</Button>
             <Button
-              colorScheme="blue"
-              onClick={() =>
-                selectedEmail && handleImport(selectedEmail.email_id)
-              }
-              isLoading={importing}
-              loadingText="Importing..."
+              onPress={() => selectedEmail && handleImport(selectedEmail.email_id)}
+              loading={importing}
+              disabled={importing}
             >
               Import Transaction
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </VStack>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Snackbar {...snackbar.snackbarProps}>{snackbar.message}</Snackbar>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    gap: 16,
+  },
+  card: {
+    width: '100%',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 8,
+  },
+  center: {
+    minHeight: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    padding: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  muted: {
+    color: '#888',
+    marginBottom: 8,
+  },
+  mutedSmall: {
+    color: '#aaa',
+    fontSize: 12,
+  },
+  mutedSmallBold: {
+    color: '#888',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  mutedBody: {
+    color: '#666',
+    marginTop: 4,
+  },
+  noteBox: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#E3F2FD',
+  },
+  noteText: {
+    color: '#0D47A1',
+    fontSize: 13,
+  },
+});

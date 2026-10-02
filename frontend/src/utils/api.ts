@@ -26,11 +26,10 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        // TODO: redirect-on-401 disabled during local dev (SKIP_AUTH in App.tsx) — restore before shipping
-        // if (error.response?.status === 401) {
-        //   localStorage.removeItem('auth_token');
-        //   window.location.href = '/login';
-        // }
+        if (error.response?.status === 401) {
+          localStorage.removeItem('auth_token');
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
     );
