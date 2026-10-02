@@ -11,7 +11,7 @@ import {
   Center,
 } from '@chakra-ui/react';
 import { PieChart, Pie, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { query } from '@utils/api';
+import { apiClient } from '@utils/api';
 import { getCategoryColor } from '@utils/theme';
 
 interface SpendingData {
@@ -40,9 +40,9 @@ export const SpendingChart: React.FC = () => {
   const fetchData = async (v: 'pie' | 'trend', p: string) => {
     setLoading(true);
     try {
-      const response = await query.getSpendingTrends(p, v === 'pie' ? 'category' : 'trend');
-      setData(response.data);
-      setTotal(response.total || '0');
+      const response = await apiClient.getSpendingTrends(p, v === 'pie' ? 'category' : 'trend');
+      setData(response.data.data ?? response.data);
+      setTotal(response.data.total || '0');
     } catch (error) {
       toast({
         title: 'Error',

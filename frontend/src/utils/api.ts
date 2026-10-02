@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -26,11 +26,11 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Clear token and redirect to login
-          localStorage.removeItem('auth_token');
-          window.location.href = '/login';
-        }
+        // TODO: redirect-on-401 disabled during local dev (SKIP_AUTH in App.tsx) — restore before shipping
+        // if (error.response?.status === 401) {
+        //   localStorage.removeItem('auth_token');
+        //   window.location.href = '/login';
+        // }
         return Promise.reject(error);
       }
     );

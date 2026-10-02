@@ -13,8 +13,11 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { useCreateTransaction, useUpdateTransaction } from '@hooks/useTransactions';
-import { useCategories, useSubcategories } from '@hooks/useCategories';
+import { useCategories, useCreateCategory, useSubcategories } from '@hooks/useCategories';
+import { getCategoryColor } from '@utils/theme';
 import type { Transaction } from '@types/index';
+
+const NEW_CATEGORY_VALUE = '__new__';
 
 interface TransactionFormProps {
   initialData?: Transaction;
@@ -29,9 +32,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 }) => {
   const toast = useToast();
   const { data: categories } = useCategories();
+  const createCategoryMutation = useCreateCategory();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(
     initialData?.category_id || null
   );
+  const [isNewCategory, setIsNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const { data: subcategories } = useSubcategories(selectedCategory!);
 
   const [formData, setFormData] = useState({
@@ -55,6 +61,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
     // Reset subcategory when category changes
     if (name === 'category_id') {
+      if (value === NEW_CATEGORY_VALUE) {
+        setIsNewCategory(true);
+        setSelectedCategory(null);
+        setFormData((prev) => ({ ...prev, subcategory_id: '' }));
+        return;
+      }
+      setIsNewCategory(false);
       setSelectedCategory(parseInt(value));
       setFormData((prev) => ({ ...prev, subcategory_id: '' }));
     }
@@ -63,7 +76,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.description || !formData.amount || !formData.category_id) {
+    if (!formData.description || !formData.amount || (!formData.category_id && !isNewCategory)) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields',
@@ -73,14 +86,35 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       return;
     }
 
+    if (isNewCategory && !newCategoryName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a category name',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
+      let categoryId: number;
+      if (isNewCategory) {
+        const newCategory = await createCategoryMutation.mutateAsync({
+          name: newCategoryName.trim(),
+          color: getCategoryColor(categories?.length || 0),
+        });
+        categoryId = newCategory.id;
+      } else {
+        categoryId = parseInt(formData.category_id as string);
+      }
+
       if (initialData) {
         await updateMutation.mutateAsync({
           id: initialData.id,
           data: {
             ...formData,
             amount: parseFloat(formData.amount as string),
-            category_id: parseInt(formData.category_id as string),
+            category_id: categoryId,
             subcategory_id: formData.subcategory_id ? parseInt(formData.subcategory_id as string) : null,
             bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id as string) : null,
           },
@@ -95,7 +129,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         await createMutation.mutateAsync({
           ...formData,
           amount: parseFloat(formData.amount as string),
-          category_id: parseInt(formData.category_id as string),
+          category_id: categoryId,
           subcategory_id: formData.subcategory_id ? parseInt(formData.subcategory_id as string) : null,
           bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id as string) : null,
         });
@@ -115,6 +149,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           bank_account_id: '',
           transaction_date: new Date().toISOString().split('T')[0],
         });
+        setIsNewCategory(false);
+        setNewCategoryName('');
       }
       onSuccess && onSuccess({} as Transaction);
     } catch (error) {
@@ -178,21 +214,42 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
         <FormControl isRequired>
           <FormLabel>Category</FormLabel>
-          <Select
-            name="category_id"
-            placeholder="Select category"
-            value={formData.category_id}
-            onChange={handleChange}
-          >
-            {categories?.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </Select>
+          {isNewCategory ? (
+            <HStack>
+              <Input
+                autoFocus
+                placeholder="New category name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsNewCategory(false);
+                  setNewCategoryName('');
+                }}
+              >
+                Cancel
+              </Button>
+            </HStack>
+          ) : (
+            <Select
+              name="category_id"
+              placeholder="Select category"
+              value={formData.category_id}
+              onChange={handleChange}
+            >
+              {categories?.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+              <option value={NEW_CATEGORY_VALUE}>+ Add new category</option>
+            </Select>
+          )}
         </FormControl>
 
-        {selectedCategory && subcategories && subcategories.length > 0 && (
+        {!isNewCategory && selectedCategory && subcategories && subcategories.length > 0 && (
           <FormControl>
             <FormLabel>Subcategory</FormLabel>
             <Select

@@ -24,8 +24,11 @@ const queryClient = new QueryClient({
 });
 
 // Protected Route Wrapper
+// TODO: skipping auth check during local dev — restore before shipping
+const SKIP_AUTH = true;
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token } = useAuthStore();
+  if (SKIP_AUTH) return <>{children}</>;
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
