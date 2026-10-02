@@ -1,13 +1,13 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { AuthRequest } from '../utils/middleware.js';
 import { query } from '../utils/db.js';
 
 const router = Router();
-const getMockUserId = () => 1;
 
 // Get connected email accounts
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
 
     const result = await query(
       `SELECT id, email_address, provider, last_synced_at, is_active, created_at
@@ -25,9 +25,9 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Add email account (OAuth placeholder)
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { email_address, provider, oauth_token, refresh_token } = req.body;
 
     if (!email_address || !provider) {
@@ -60,9 +60,9 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Remove email account
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { id } = req.params;
 
     const result = await query(
@@ -82,9 +82,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // Sync emails from account
-router.post('/:id/sync', async (req: Request, res: Response) => {
+router.post('/:id/sync', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { id } = req.params;
 
     // Get email account
@@ -119,9 +119,9 @@ router.post('/:id/sync', async (req: Request, res: Response) => {
 });
 
 // Test email connection
-router.post('/:id/test', async (req: Request, res: Response) => {
+router.post('/:id/test', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { id } = req.params;
 
     const result = await query(

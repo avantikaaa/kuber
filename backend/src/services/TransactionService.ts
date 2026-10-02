@@ -138,7 +138,7 @@ export class TransactionService {
       `DELETE FROM transactions WHERE id = $1 AND user_id = $2`,
       [transactionId, userId]
     );
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Analytics

@@ -1,15 +1,15 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { AuthRequest } from '../utils/middleware.js';
 import { query } from '../utils/db.js';
 import { EmailParser } from '../services/EmailParser.js';
 
 const router = Router();
 const emailParser = new EmailParser();
-const getMockUserId = () => 1;
 
 // Get email suggestions (unprocessed emails)
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { limit = 5 } = req.query;
 
     const suggestions = await emailParser.getEmailSuggestions(userId, parseInt(limit as string));
@@ -22,9 +22,9 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Create transaction from email
-router.post('/:emailId/import', async (req: Request, res: Response) => {
+router.post('/:emailId/import', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { emailId } = req.params;
     const { categoryId, subcategoryId, bankAccountId } = req.body;
 
@@ -96,9 +96,9 @@ router.post('/:emailId/import', async (req: Request, res: Response) => {
 });
 
 // Skip email (mark as skipped)
-router.post('/:emailId/skip', async (req: Request, res: Response) => {
+router.post('/:emailId/skip', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { emailId } = req.params;
 
     await query(

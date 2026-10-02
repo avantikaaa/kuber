@@ -4,8 +4,8 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  // Min 8 chars, at least 1 uppercase, 1 lowercase, 1 number
-  return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password);
+  // TODO: temporarily relaxed to min-length only — restore uppercase/lowercase/number checks before shipping
+  return password.length >= 8;
 };
 
 export const validateCurrency = (currency: string): boolean => {

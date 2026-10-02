@@ -1,14 +1,14 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { AuthRequest } from '../utils/middleware.js';
 import { TransactionService } from '../services/TransactionService.js';
 
 const router = Router();
 const transactionService = new TransactionService();
-const getMockUserId = () => 1;
 
 // Get spending trends (by category or payment mode)
-router.get('/spending-trends', async (req: Request, res: Response) => {
+router.get('/spending-trends', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { period = '30', view = 'category' } = req.query;
     const days = parseInt(period as string) || 30;
 
@@ -54,9 +54,9 @@ router.get('/spending-trends', async (req: Request, res: Response) => {
 });
 
 // Get dashboard summary
-router.get('/dashboard', async (req: Request, res: Response) => {
+router.get('/dashboard', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
 
     // Current month (pie chart data)
     const now = new Date();

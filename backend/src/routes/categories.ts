@@ -1,13 +1,13 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { AuthRequest } from '../utils/middleware.js';
 import { query } from '../utils/db.js';
 
 const router = Router();
-const getMockUserId = () => 1;
 
 // Get all categories (system + user)
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
 
     const result = await query(
       `SELECT * FROM categories WHERE is_system = TRUE OR user_id = $1 ORDER BY created_at DESC`,
@@ -22,9 +22,9 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Create category
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { name, color } = req.body;
 
     if (!name || !color) {
@@ -49,9 +49,9 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Update category
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { id } = req.params;
     const { name, color } = req.body;
 
@@ -92,9 +92,9 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // Delete category
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { id } = req.params;
 
     const result = await query(
@@ -114,9 +114,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // Get subcategories for category
-router.get('/:categoryId/subcategories', async (req: Request, res: Response) => {
+router.get('/:categoryId/subcategories', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { categoryId } = req.params;
 
     const result = await query(
@@ -137,9 +137,9 @@ router.get('/:categoryId/subcategories', async (req: Request, res: Response) => 
 });
 
 // Create subcategory
-router.post('/:categoryId/subcategories', async (req: Request, res: Response) => {
+router.post('/:categoryId/subcategories', async (req: AuthRequest, res: Response) => {
   try {
-    const userId = getMockUserId();
+    const userId = req.user!.userId;
     const { categoryId } = req.params;
     const { name } = req.body;
 
